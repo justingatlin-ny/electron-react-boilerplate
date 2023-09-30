@@ -14,6 +14,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import getImages from './gatherPhotos';
 
 class AppUpdater {
   constructor() {
@@ -25,10 +26,9 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 
-ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
+ipcMain.on('getImages', async (event, arg) => {
+  getImages(event, arg[0].path);
+  return event.reply('getImages', 'invoked');
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -71,8 +71,8 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
-    width: 1024,
-    height: 728,
+    width: 2048,
+    height: 1028,
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
