@@ -2,7 +2,6 @@
 /* eslint-disable no-restricted-syntax */
 import { IpcMainEvent, ipcMain } from 'electron';
 import ExifReader, { ExifTags, ThumbnailTags } from 'exifreader';
-import process from 'process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { ImageType } from '../renderer/screens/Home';
