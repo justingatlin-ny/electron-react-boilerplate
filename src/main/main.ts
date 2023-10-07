@@ -28,7 +28,6 @@ let mainWindow: BrowserWindow | null = null;
 
 ipcMain.on('getImages', async (event, arg) => {
   getImages(event, arg[0].path);
-  return event.reply('getImages', 'invoked');
 });
 
 if (process.env.NODE_ENV === 'production') {

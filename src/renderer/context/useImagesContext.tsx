@@ -16,10 +16,14 @@ export type ImageType = {
   fullPath: string;
   name: string;
   dir: string;
+  image: ArrayBuffer;
+  width: string;
+  height: string;
   base64: string;
   type: string;
   micro: number;
   orientation: undefined | NumberTag;
+  hash: string;
 };
 
 interface IImagesContext {
