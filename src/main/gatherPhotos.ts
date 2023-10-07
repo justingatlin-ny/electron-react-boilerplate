@@ -4,6 +4,9 @@ import { IpcMainEvent, ipcMain } from 'electron';
 import ExifReader, { ExifTags, ThumbnailTags } from 'exifreader';
 import path from 'node:path';
 import fs from 'node:fs';
+import { Buffer } from 'node:buffer';
+import imghash from 'imghash';
+
 import { ImageType } from '../renderer/screens/Home';
 
 export function* readAllFiles(
@@ -11,14 +14,14 @@ export function* readAllFiles(
   dir: string,
 ): Generator<Promise<any>> {
   const files = fs.readdirSync(dir, { withFileTypes: true });
+
   for (const file of files) {
     if (file.isDirectory()) {
       const directory = path.join(dir, file.name);
       yield* readAllFiles(event, directory);
     } else {
       const fullPath = path.join(dir, file.name);
-      if (!/\.(jpe?g|tiff|gif)$/i.test(file.name)) {
-        console.error({ err: fullPath });
+      if (!/\.(jpe?g|png|gif)$/i.test(file.name)) {
         yield Promise.resolve(undefined);
       } else {
         const exifData = ExifReader.load(fullPath, {
@@ -26,22 +29,34 @@ export function* readAllFiles(
           expanded: true,
         });
         const imgData = exifData
-          .then((data) => {
-            const { base64, type } = data.Thumbnail as ThumbnailTags;
-            const { Orientation: orientation } = data.exif as ExifTags;
+          .then(({ Thumbnail, exif }) => {
+            const { type, image } = Thumbnail as ThumbnailTags;
+            const {
+              Orientation: orientation,
+              PixelXDimension,
+              PixelYDimension,
+            } = exif as ExifTags;
             return {
               name: file.name,
               fullPath,
               dir,
               orientation,
-              base64,
+              image: Buffer.from(image),
               type,
+              width: PixelXDimension?.value,
+              height: PixelYDimension?.value,
             };
           })
-          .catch(() => {
-            console.error({ err: fullPath });
+          .then(async (obj) => {
+            const hash = await imghash.hash(obj.image, 8, 'binary');
+            const base64 = Buffer.from(obj.image).toString('base64');
+            return { ...obj, hash, base64 };
+          })
+          .catch((err) => {
+            console.error({ err });
             return undefined;
           });
+
         yield imgData;
       }
     }
@@ -50,11 +65,14 @@ export function* readAllFiles(
 let status: string = '';
 const max = 50;
 const getImages = async (event: IpcMainEvent, imagePath: string) => {
-  console.log({ status });
-  if (!fs.existsSync(imagePath) || status) return '1';
+  if (!fs.existsSync(imagePath) || status) {
+    return event.reply('getImages', 'path does not exist');
+  }
+  event.reply('getImages', 'invoked');
   let imagesList: ImageType[] = [];
 
   const iterator = readAllFiles(event, imagePath);
+
   let isDone: boolean | undefined;
   status = 'initializing';
   event.reply('status', status);
@@ -79,9 +97,7 @@ const getImages = async (event: IpcMainEvent, imagePath: string) => {
       status = '';
     }
   };
-  console.log('func');
   ipcMain.on('action', (evt, action) => {
-    console.log('action', action);
     if (action === 'continue') {
       evt.reply('status', action);
       if (status === 'paused') {

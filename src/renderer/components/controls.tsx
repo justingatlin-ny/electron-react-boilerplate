@@ -1,8 +1,9 @@
 import React, { FormEvent } from 'react';
 import useImagesContext from '../context/useImagesContext';
 
-const Controls = () => {
-  const { status } = useImagesContext();
+const Controls = ({ distance }) => {
+  const { status, imagesList } = useImagesContext();
+
   const onClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     const { name } = event.currentTarget;
     if (status.current === 'paused') {
@@ -18,7 +19,7 @@ const Controls = () => {
     const formData = new FormData(form);
 
     const formJson = Object.fromEntries(formData.entries());
-    if (status.current !== 'running') {
+    if (status.current !== 'running' && formJson.path) {
       window.electron.ipcRenderer.sendMessage('getImages', [formJson]);
     } else {
       console.log({ status: status.current });
@@ -39,6 +40,7 @@ const Controls = () => {
         <input type="text" name="path" placeholder="pathToPhotos/" />
         <button type="submit">Submit</button>
       </form>
+      <div>{`Distance: ${distance} `}</div>
     </div>
   );
 };
